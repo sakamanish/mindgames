@@ -18,32 +18,46 @@ const findCatalogGame = (id) => catalogGames.find((game) => game.id === id)
 
 function App() {
   const [profile, setProfile] = useState(defaultProfile)
-  const [screen, setScreen] = useState('home')
+  const [screen, setScreen] = useState(() => window.history.state?.screen || 'home')
   const [profileLoaded, setProfileLoaded] = useState(false)
 
   useEffect(() => { let mounted = true; loadProfile().then((saved) => { if (mounted) { setProfile(saved); setProfileLoaded(true) } }); return () => { mounted = false } }, [])
   useEffect(() => { if (profileLoaded) saveProfile(profile) }, [profile, profileLoaded])
 
+  useEffect(() => {
+    const initialScreen = window.history.state?.screen || 'home'
+    window.history.replaceState({ screen: initialScreen }, '')
+
+    const handlePopState = (event) => setScreen(event.state?.screen || 'home')
+    window.addEventListener('popstate', handlePopState)
+    return () => window.removeEventListener('popstate', handlePopState)
+  }, [])
+
   const finishGame = (session) => setProfile((current) => recordSession(current, session))
-  const openGame = (id) => setScreen(id)
+  const navigate = (target, replace = false) => {
+    if (replace) window.history.replaceState({ screen: target }, '')
+    else window.history.pushState({ screen: target }, '')
+    setScreen(target)
+  }
+  const openGame = (id) => navigate(id)
 
   return (
     <div className="app-shell">
       <aside className="sidebar">
-        <button className="brand" onClick={() => setScreen('home')} aria-label="Go home">
+        <button className="brand" onClick={() => navigate('home')} aria-label="Go home">
           <span className="brand-mark">M</span><span>Mind<span>Mint</span></span>
         </button>
         <nav aria-label="Primary navigation">
-          <NavButton screen={screen} target="home" icon="⌂" label="Home" onClick={setScreen} />
-          <NavButton screen={screen} target="games" icon="▦" label="Games" onClick={setScreen} />
-          <NavButton screen={screen} target="progress" icon="◷" label="Progress" onClick={setScreen} />
+          <NavButton screen={screen} target="home" icon="⌂" label="Home" onClick={navigate} />
+          <NavButton screen={screen} target="games" icon="▦" label="Games" onClick={navigate} />
+          <NavButton screen={screen} target="progress" icon="◷" label="Progress" onClick={navigate} />
         </nav>
         <nav className="mobile-nav" aria-label="Mobile navigation">
-          <button className={screen==='home'?'active':''} onClick={()=>setScreen('home')}><span>⌂</span><small>Home</small></button>
-          <button className={screen==='games'?'active':''} onClick={()=>setScreen('games')}><span>▦</span><small>Games</small></button>
-          <button className={screen==='challenges'?'active':''} onClick={()=>setScreen('challenges')}><span>◆</span><small>Challenges</small></button>
-          <button className={screen==='progress'?'active':''} onClick={()=>setScreen('progress')}><span>◷</span><small>Progress</small></button>
-          <button className={screen==='profile'?'active':''} onClick={()=>setScreen('profile')}><span>◉</span><small>Profile</small></button>
+          <button className={screen==='home'?'active':''} onClick={()=>navigate('home')}><span>⌂</span><small>Home</small></button>
+          <button className={screen==='games'?'active':''} onClick={()=>navigate('games')}><span>▦</span><small>Games</small></button>
+          <button className={screen==='challenges'?'active':''} onClick={()=>navigate('challenges')}><span>◆</span><small>Challenges</small></button>
+          <button className={screen==='progress'?'active':''} onClick={()=>navigate('progress')}><span>◷</span><small>Progress</small></button>
+          <button className={screen==='profile'?'active':''} onClick={()=>navigate('profile')}><span>◉</span><small>Profile</small></button>
         </nav>
         <div className="profile">
           <div className="avatar">M</div>
@@ -66,11 +80,12 @@ function App() {
           <UniversalGame
             game={findCatalogGame(screen)}
             profile={profile}
-            onBack={() => setScreen('games')}
+            onBack={() => navigate('games', true)}
             finishGame={finishGame}
           />
         )}
       </main>
+      <footer className="app-footer">Developed by <a href="https://sakamanish.me" target="_blank" rel="noreferrer">sakamanish.me</a></footer>
     </div>
   )
 }
